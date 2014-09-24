@@ -1,0 +1,43 @@
+#import "PAT.Lib.DispersionGame";
+#define targetStep 30; //the step you want to check
+#define num_of_action 2;
+var ActionHolder[num_of_action + 1] = [0, 2, 0];
+var ActionChooser[num_of_action + 1];
+var SequentialNumber[num_of_action + 1];
+var step = 0;
+
+PlayerChooseAction(i, stepBound) = 
+                         [step < targetStep]ifa(SequentialNumber[i] < stepBound && ActionHolder[i] > 1){
+          			     pcase{			  
+            					  call(probability_BSS, ActionHolder, 1) :{ActionChooser[1]++; SequentialNumber[i]++}->PlayerChooseAction(i, stepBound)
+            					  call(probability_BSS, ActionHolder, 2) :{ActionChooser[2]++; SequentialNumber[i]++}->PlayerChooseAction(i, stepBound)
+            				  }
+           		}
+				else ifa(SequentialNumber[i] == stepBound)
+			    {
+			          Skip
+			    }
+				else
+				{
+				     {ActionChooser[i]++; SequentialNumber[i]++} -> PlayerChooseAction(i, stepBound)
+				};
+
+RoundFinish = {
+                step++;
+				ActionHolder[1] = ActionChooser[1];
+				ActionHolder[2] = ActionChooser[2];
+				ActionChooser[1] = 0;
+				ActionChooser[2] = 0;
+				SequentialNumber[1] = 0;
+				SequentialNumber[2] = 0;
+			  }->Skip;
+
+
+System(a1, a2) = PlayerChooseAction(1, a1);PlayerChooseAction(2, a2)
+;RoundFinish;System(ActionHolder[1], ActionHolder[2]);
+
+aSystem = System(2, 0);
+
+#define MDO ActionHolder[1] == 1 && ActionHolder[2] == 1 && step <= targetStep;
+
+#assert aSystem reaches MDO with prob;

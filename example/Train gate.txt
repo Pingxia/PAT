@@ -1,0 +1,83 @@
+type
+TRAIN_STATE = {tr,on,ap}
+GATE_STATE = {dn,up} // gate can be down or up
+
+timer
+timers_enabled = true; //or false
+t1 = 0 ..10; //global timer with range 0..10
+
+share initialization
+//v: TYPE = init_value
+
+module Controller
+	variable
+		mt: in TRAIN_STATE //measured variables
+		mg: in GATE_STATE
+		cg: out BOOL = false //controlled variables
+	//v: share TYPE
+	event
+		gate_down [1,1]
+		when mg==up && mt==ap
+		do cg=true;
+		end
+	
+		gate_up [1, 1]
+		when mg==dn && mt==tr
+		do cg=false;
+		end
+	
+		skip [1, 1]
+		when !((mg==dn && mt==tr) || (mg==up && mt==ap))
+		//introspection on guards
+		do //empty
+		end
+
+end
+
+module Train
+	variable
+		mt: out TRAIN_STATE = tr //interface specification
+	event
+		start_travelling [0,*]
+		when mt==on //guard
+		do mt=tr; //action, could be multiple assignments
+		   start(t1);
+		end
+	
+		start_approaching [4,*]
+		when mt==tr
+		do mt=ap;
+		end
+	
+		start_crossing [4,*]
+		when mt==ap
+		do mt=on;
+		end
+end
+
+module Gate
+	variable
+		cg: in BOOL
+		mg: out GATE_STATE = up
+	event
+		go_down[1,2]
+		when mg==up && cg
+		do mg=dn;
+		end
+		
+		go_up [1,2]
+		when mg==dn && !cg
+		do mg=up;
+		end
+end
+
+composition System = Train || Gate|| Controller;
+
+#define safegoal mg==up && mt==on;
+#assert System reaches safegoal;
+#assert System |= [](start_travelling -> <> go_up);
+
+#define c1 t1==0;
+#define c2 t1<=3;
+#define c3 mono(t1) == true;
+#assert System |= []((start_travelling && c1) -> c3 U (go_up && c2));

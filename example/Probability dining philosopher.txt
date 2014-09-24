@@ -1,0 +1,60 @@
+// randomized dining philosophers [LR81] has fairness
+// dxp/gxn 23/01/02
+
+
+//mdp
+
+#define N 2;
+
+var Fork[N];      //0 means free and 1 means not free
+var hungryCounter;
+var eatCounter;
+
+//trying                                           or keep thinking
+phil0(i) = Hungry{hungryCounter++;} -> phil1(i) [] tau -> phil0(i);
+
+// draw randomly
+phil1(i) = pcase{       
+                [0.5] : phil2(i)
+                default : phil3(i)
+                };
+                
+// pick up left if left fork is free   
+phil2(i) = [Fork[(i+1)%N]==0]tau{Fork[(i+1)%N]=1;} -> phil4(i) [] [Fork[(i+1)%N]==1]tau -> phil2(i);
+
+// pick up right if right fork is free 
+phil3(i) = [Fork[(i+N-1)%N]==0]tau{Fork[(i+N-1)%N]=1;} -> phil5(i) [] [Fork[(i+N-1)%N]==1]tau -> phil3(i);
+
+           // pick up right (got left)
+phil4(i) = [Fork[(i+N-1)%N]==0] Eat {Fork[(i+N-1)%N]=1; hungryCounter--; eatCounter++;} -> phil6(i)
+           []
+           // right not free (got left)
+           [Fork[(i+N-1)%N]==1] tau {Fork[(i+1)%N]=0;}-> phil1(i);
+           
+           // pick up left (got right)
+phil5(i) = [Fork[(i+1)%N]==0] Eat {Fork[(i+1)%N]=1; hungryCounter--; eatCounter++;} -> phil6(i)
+           []
+           // left not free (got right)
+           [Fork[(i+1)%N]==1] tau {Fork[(i+N-1)%N]=0;}-> phil1(i);
+
+// finished eating and put down left[]right
+
+phil6(i) = tau{Fork[(i+1)%N]=0; eatCounter--;} -> tau{Fork[(i+N-1)%N]=0;} -> phil0(i) 
+           []
+           tau{Fork[(i+N-1)%N]=0; eatCounter--;} -> tau{Fork[(i+1)%N]=0;} -> phil0(i);
+
+System = |||i:{0..N-1}@phil0(i);
+
+SpecProcess = Hungry -> SpecProcess [] Eat -> NotHungry;
+
+NotHungry = Eat -> NotHungry;
+
+#define hungry (hungryCounter>0);
+#define eat_one (eatCounter>0);
+#define eat_all (eatCounter==N);
+#assert System |= [](eat_one->[]!hungry) with pmax;
+#assert System |= <>eat_one && <>hungry with pmax;
+
+#assert System deadlockfree;//used to check the number of states in initial model
+
+#assert System refines SpecProcess with pmax;
