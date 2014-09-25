@@ -15,7 +15,7 @@ var open = 480;	// open @8am
 var close = 1080;	// close @6pm
 var time = open;
 
-Tick() = if (time == 1080) {Stop} else {{time = time + 1} -> Skip};
+Tick() = if (time == close) {Stop} else {{time = time + 1} -> Skip};
 
 PatientKnock = if (time < 660) {KnockMorning -> Skip} else if (time < 840) {KnockNoon -> Skip} else {KnockAfternoon -> Skip};
 
@@ -23,7 +23,7 @@ KnockingMorning = pcase{
 						15: { patient = Elder } -> Skip
 						10: { patient = Student } -> Skip
 						5: 	{ patient = Employee } -> Skip
-						70: Tick
+						70: Tick()
 };
 
 KnockingNoon = pcase{
@@ -37,7 +37,7 @@ KnockingAfternoon = pcase{
 						7:	{ patient = Elder } -> Skip
 						15: { patient = Student } -> Skip
 						8: 	{ patient = Employee } -> Skip
-						70: Tick
+						70: Tick()
 };
 
 
