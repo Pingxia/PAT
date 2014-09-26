@@ -1,0 +1,48 @@
+﻿enum{Student, Employee, Elder};
+
+#define MAX_WAITING_TIME 60;
+#define CONSULTING_TIME 30; //  < 30 for updated versions.
+#define NO_OF_DOCS 3;
+//#define NO_OF_PATIENT 100;
+
+//var noOfStudents = 30;
+//var noOfEmployees = 20; 
+//var noOfElders = 50; 
+
+var patient;
+
+var open = 480;	// open @8am
+var close = 1080;	// close @6pm
+var time = open;
+
+Tick() = if (time == close) {Stop} else {{time = time + 1} -> Skip};
+
+PatientKnock = if (time < 660) {KnockMorning -> Skip} else if (time < 840) {KnockNoon -> Skip} else {KnockAfternoon -> Skip};
+
+KnockingMorning = pcase{
+						15: { patient = Elder } -> Skip
+						10: { patient = Student } -> Skip
+						5: 	{ patient = Employee } -> Skip
+						70: Tick()
+};
+
+KnockingNoon = pcase{
+						3: 	{ patient = Elder } -> Skip
+						10: { patient = Student } -> Skip
+						17: { patient = Employee } -> Skip
+						70: Tick()
+};
+
+KnockingAfternoon = pcase{
+						7:	{ patient = Elder } -> Skip
+						15: { patient = Student } -> Skip
+						8: 	{ patient = Employee } -> Skip
+						70: Tick()
+};
+
+
+
+// for testing purpose
+//ChooseTime =  Stop;
+//#define goal (open <= time && time <= close);
+//#assert ChooseTime reaches goal;
