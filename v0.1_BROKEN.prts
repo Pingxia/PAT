@@ -1,0 +1,104 @@
+﻿enum{Student, Employee, Elderly};
+
+//channel DoctorBusy 0;
+
+#define MAX_WAITING_TIME 60;
+#define CONSULTING_TIME 30; //  < 30 for updated versions.
+#define NO_OF_DOCS 3;
+#define MAX_PATIENT 200;
+#define CLOSE 480;
+
+var time = 0;
+
+var patientStatus[MAX_PATIENT];				// Student, Employee, or Elderly
+var patientWaitingTime[MAX_PATIENT];		
+var patientConsultingTime[MAX_PATIENT];
+
+var patientQueueNo = 0;
+var nextServingNo = 0;
+var iterator;
+
+var availableDocs = NO_OF_DOCS;
+var docConsulting = [ -1(NO_OF_DOCS) ];
+
+var patientLeaveWithAnger = 0;  //count number of patients leaving
+
+//Patient arriving
+Tick() = if (time == CLOSE) { Stop } else { {time = time + 1} -> Skip} ;
+
+WelcomePatient() = if (time < 180) {KnockMorning -> Skip} else if (time < 360) {KnockNoon -> Skip} else {KnockAfternoon -> Skip };
+
+KnockingMorning = pcase{
+						15: { patientStatus[patientQueueNo] = Elderly }  -> { patientQueueNo = patientQueueNo+1 } -> Skip
+						10: { patientStatus[patientQueueNo] = Student }  -> { patientQueueNo = patientQueueNo+1 } -> Skip
+						5: 	{ patientStatus[patientQueueNo] = Employee } -> { patientQueueNo = patientQueueNo+1 } -> Skip
+						70: Skip
+};
+
+KnockingNoon = pcase{
+						10: { patientStatus[patientQueueNo] = Elderly }  -> { patientQueueNo = patientQueueNo+1 } -> Skip
+						15: { patientStatus[patientQueueNo] = Student }  -> { patientQueueNo = patientQueueNo+1 } -> Skip
+						25:	{ patientStatus[patientQueueNo] = Employee } -> { patientQueueNo = patientQueueNo+1 } -> Skip
+						50: Skip
+};
+
+KnockingAfternoon = pcase{
+						7: 	{ patientStatus[patientQueueNo] = Elderly }  -> { patientQueueNo = patientQueueNo+1 } -> Skip
+						15: { patientStatus[patientQueueNo] = Student }  -> { patientQueueNo = patientQueueNo+1 } -> Skip
+						8: 	{ patientStatus[patientQueueNo] = Employee } -> { patientQueueNo = patientQueueNo+1 } -> Skip
+						70: Skip
+};
+
+UpdateWaitingTime() = { iterator = nextServingNo;
+						while (iterator < patientQueueNo){
+							patientWaitingTime[iterator] = patientWaitingTime[iterator] + 1;
+							if (patientWaitingTime[iterator] == MAX_WAITING_TIME){
+								patientLeaveWithAnger = patientLeaveWithAnger + 1;
+							}
+						}
+					  } -> Skip;
+					  
+UpdateConsultingTime() = { iterator = 0;
+						   while (iterator < NO_OF_DOCS){
+						   		if (docConsulting[iterator] != -1){
+						   			patientConsultingTime[docConsulting[iterator]] = patientConsultingTime[docConsulting[iterator]] + 1;
+						   		if (patientConsultingTime[docConsulting[iterator]] == CONSULTING_TIME){
+						   			docConsulting[iterator] = -1;
+						   			availableDocs = availableDocs + 1;
+						   		}
+						   		}
+						   }
+						} -> Skip;
+
+CallDoctor() = { 	if (availableDocs > 0) {
+						var chosen = false; 
+						while (iterator < NO_OF_DOCS && !chosen){
+						   		if (docConsulting[iterator] == -1){ 
+						   			while (patientWaitingTime[nextServingNo] >= 60){
+						   				nextServingNo = nextServingNo + 1;		
+						   			}
+						   		docConsulting[iterator] = nextServingNo;
+						   		nextServingNo = nextServingNo + 1;
+						   		chosen = true;
+								}
+								availableDocs = availableDocs - 1;
+						}
+					}
+				} -> Skip;
+				
+
+Process() = Tick() ;  WelcomePatient() ; UpdateWaitingTime() ||| UpdateConsultingTime() ; CallDoctor() ; Process();
+
+#define goal patientLeaveWithAnger < 1;
+
+//MorningPatient = KnockingMorning; (DoctorBusy?0 -> SeeDoctor) timeout[60] PatientLeave{count = count + 1;} -> Wait[1]; MorningPatient;
+//NoonPatient = KnockingNoon; (DoctorBusy?0 -> SeeDoctor) timeout[60] PatientLeave{count = count + 1;} -> Wait[1]; NoonPatient;
+//AfternoonPatient = KnockingAfternoon; (DoctorBusy?0 -> SeeDoctor) timeout[60] PatientLeave{count = count + 1;} -> Wait[1]; AfternoonPatient;
+//Patient = MorningPatient deadline[160]; NoonPatient deadline[160]; AfternoonPatient deadline[160];
+
+//SeeDoctor = DoctorBusy!1 -> Wait[30]; DoctorBusy!0 -> SeeDoctor;
+//Hospital = Patient ||| SeeDoctor;
+//#assert Hospital reaches goal with prob;
+
+#assert Process() reaches goal;// with prob;
+//#assert Tick() reaches goal;
