@@ -1,0 +1,27 @@
+#define MAX_WAITING_TIME 60;
+#define CONSULTING_TIME 30; //  < 30 for updated versions.
+#define NO_OF_DOCS 3;
+#define NO_OF_PATIENT 100;
+#define MAX_WORKING_TIME 8 * 60;
+#define PATIENT_ARRIVAL_INTERVAL 10;
+
+var timer = -1;
+var consultTimeRecords[NO_OF_PATIENT]; //initially equals to CONSULTING_TIME. 0 means consulted
+var waitingTimeRecords[NO_OF_PATIENT]; //initially equals to 0
+var patient_in_consultation = -1;
+var current_patient = -1;
+var patients_consulted = -1;
+var doctorAvailable = NO_OF_DOCS;
+var maxWaitingTime = 0;
+
+Tick() = {timer = timer + 1; UpdateWaitingTime(); UpdateConsultTime()} -> Skip;
+UpdateWaitingTime() = {var i=patient_in_consultation+1; while(i<=current_patient){waitingTimeRecords[i]++;i++}};
+UpdateConsultTime() = {var i=patients_consulted+1; while(i<=patient_in_consultation){consultTimeRecords[i]--;if(consultTimeRecords[i]==0){doctorAvailable++;patients_consulted++} i++};
+PatientArrival = if (timer%PATIENT_ARRIVAL_INTERVAL==0) {current_patient++;ConsultADoctor} else {Skip};
+ConsultADoctor = if (doctorAvailable>0) {doctorAvailable--;patient_in_consultation++};
+FindMaxWaitingTime() = {var i=0;while(i<NO_OF_PATIENT){if(maxWaitingTime<waitingTimeRecords[i]){maxWaitingTime=waitingTimeRecords[i]}i++}};
+
+Simulate = PatientArrival -> Tick() -> FindMaxWaitingTime() -> Simulate;
+
+#define consulting_all_patient_within_working_hours patients_consulted==NO_OF_PATIENT-1 && timer<MAX_WORKING_TIME;
+#define goal_max_waiting_less_than_60 maxWaitingTime < MAX_WAITING_TIME && patients_consulted==NO_OF_PATIENT-1 && timer<MAX_WORKING_TIME;;
