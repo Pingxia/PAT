@@ -1,0 +1,37 @@
+﻿//one doctor can only attend to one patient at a certain time
+
+//set up the scenario
+#define N 5; //number of doctors
+#define busy 0; // doctor is currently busy with one patient
+#define free 1; //doctor is currently free
+#define M 100; //number of patients 
+#define waiting 0; //patient is waiting
+#define consulting 1; //patient is consulting
+#define leave 2; //patient leave after consulting
+#define leavewithanger 3; //patient leave with anger
+
+#define MAXWAIT 30; //number of minutes a patient will wait for consulting
+#define CONSULTTIME 60; //every patient will get 60 min consulting time
+
+#define closingtime 5; //hospital only operates 8 hours
+
+var time = 0; //number of minutes passed since hospital open
+var waitingTime[M]; //waiting time of each patient
+
+//actions and states changes
+doctor(i)= Skip;
+
+patient(i)= Skip;
+
+tick()= if(time==closingtime) {Stop} else { {time = time + 1}-> tick()};
+
+//modeling the system
+hospital = (||i:{0..N-1}@(doctor(i)))||(||i:{0..M-1}@(patient(i)))||tick();
+
+//reasoning
+//#define allpatientsattendedto 
+//#define nopatientleavewithoutanger
+
+#define closeontime (time==closingtime);
+
+#assert hospital |= <>closeontime;
