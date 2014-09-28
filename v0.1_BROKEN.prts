@@ -2,26 +2,27 @@
 
 //channel DoctorBusy 0;
 
+#define MAX_PATIENT 200;
+
 #define MAX_WAITING_TIME 60;
 #define CONSULTING_TIME 30; //  < 30 for updated versions.
 #define NO_OF_DOCS 3;
-#define MAX_PATIENT 200;
-#define CLOSE 480;
+#define CLOSE 480; 							// The clinic operates 480/60 = 8 hours per day.
 
-var time = 0;
+var time = 0;								// current time
 
 var patientStatus[MAX_PATIENT];				// Student, Employee, or Elderly
-var patientWaitingTime[MAX_PATIENT];		
-var patientConsultingTime[MAX_PATIENT];
+var patientWaitingTime[MAX_PATIENT];		// from 0 to MAX_WAITING_TIME
+var patientConsultingTime[MAX_PATIENT];		// from 0 to CONSULTING_TIME
 
-var patientQueueNo = 0;
-var nextServingNo = 0;
+var patientQueueNo = 0;						// Current queue number. i.e. no of patients today
+var nextServingNo = 0;						
 var iterator;
 
-var availableDocs = NO_OF_DOCS;
-var docConsulting = [ -1(NO_OF_DOCS) ];
+var availableDocs = NO_OF_DOCS;				
+var docConsulting = [ -1(NO_OF_DOCS) ];		// the queue number of the patient who is being consulted
 
-var patientLeaveWithAnger = 0;  //count number of patients leaving
+var patientLeaveWithAnger = 0;  			//count number of patients reaching MAX_WAITING_TIME
 
 //Patient arriving
 Tick() = if (time == CLOSE) { Stop } else { {time = time + 1} -> Skip} ;
@@ -85,11 +86,15 @@ CallDoctor() = { 	if (availableDocs > 0) {
 						}
 					}
 				} -> Skip;
-				
+
 
 Process() = Tick() ;  WelcomePatient() ; UpdateWaitingTime() ||| UpdateConsultingTime() ; CallDoctor() ; Process();
 
-#define goal patientLeaveWithAnger < 1;
+#define goalProportion 1/5;
+
+#define goal patientLeaveWithAnger/patientQueueNo < goalProportion;
+
+#assert Process() reaches goal with prob;
 
 //MorningPatient = KnockingMorning; (DoctorBusy?0 -> SeeDoctor) timeout[60] PatientLeave{count = count + 1;} -> Wait[1]; MorningPatient;
 //NoonPatient = KnockingNoon; (DoctorBusy?0 -> SeeDoctor) timeout[60] PatientLeave{count = count + 1;} -> Wait[1]; NoonPatient;
@@ -100,5 +105,5 @@ Process() = Tick() ;  WelcomePatient() ; UpdateWaitingTime() ||| UpdateConsultin
 //Hospital = Patient ||| SeeDoctor;
 //#assert Hospital reaches goal with prob;
 
-#assert Process() reaches goal;// with prob;
+
 //#assert Tick() reaches goal;
