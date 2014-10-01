@@ -20,35 +20,34 @@ var waitingTime[M]; //waiting time of each patient
 var consultingTime[M]; //consulting time of each patient
 var doctors[N]; //status of each doctor
 var patients[M]; //status of each patient
+var FreeDoctor = 5;
 
 //actions and states changes
-patient(i,j)=[time==closingtime]oneminpass{time=closingtime} -> Stop
+patient(i)=[time==closingtime]oneminpass{time=closingtime} -> Stop
 []
- [patients[i]==0 && waitingTime[i]==MAXWAIT]oneminpass{patients[i]=3;} -> patient(i,j)
+ [patients[i]==0 && waitingTime[i]==MAXWAIT]oneminpass{patients[i]=3;} -> Stop
 			[] 
-			[patients[i]==0 && waitingTime[i]<MAXWAIT && doctors[j]==0]assign.i.j{doctors[j]=1; patients[i]=1;} -> patient(i,j)
+			[patients[i]==0 && waitingTime[i]<MAXWAIT && FreeDoctor>0]assign.i{patients[i]=1;FreeDoctor=FreeDoctor-1;} -> patient(i)
 			[] 
-			[patients[i]==1 && consultingTime[i]==CONSULTTIME]oneminpass{patients[i]=2 ; doctors[j]=0;} -> patient(i,j)
+			[patients[i]==1 && consultingTime[i]==CONSULTTIME]oneminpass{patients[i]=2 ; FreeDoctor=FreeDoctor+1;} -> Stop
 			[] 
-			[patients[i]==1 && consultingTime[i]<CONSULTTIME]oneminpass{patients[i]=1 ; consultingTime[i]++;} -> patient(i,j)
+			[patients[i]==1 && consultingTime[i]<CONSULTTIME]oneminpass{patients[i]=1 ; consultingTime[i]++;} -> patient(i)
 			[] 
-			[patients[i]==2]leavenormal.i{patients[i]=2} -> patient(i,j)
-			[] 
-			[patients[i]==3]leavewithangerr.i{patients[i]=3} -> patient(i,j)
-			[] 
-			{waitingTime[i]++} -> patient(i,j);
+			[patients[i]==0 && waitingTime[i]<MAXWAIT && FreeDoctor<1]wait{waitingTime[i]++} -> patient(i);
 			
 tick()= [time!=closingtime]oneminpass{time = time + 1} -> tick()
 		[]
 		[time==closingtime]oneminpass{time=closingtime} -> Stop;
 
 //modeling the system
-hospital = (||i:{0..M-1};j:{0..N-1}@(patient(i,j)))||tick();
+hospital = (||i:{0..M-1}@(patient(i)))||tick();
 
 //reasoning
 //#define allpatientsattendedto 
 //#define nopatientleavewithoutanger
 
 #define closeontime (time==closingtime);
+#define closeDoctor (FreeDoctor ==5);
 
 #assert hospital |= <>closeontime; //eventually hospital should close on time
+#assert hospital |= <> closeDoctor;
