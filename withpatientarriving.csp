@@ -1,0 +1,58 @@
+﻿//one doctor can only attend to one patient at a certain time
+
+//set up the scenario
+#define N 5; //number of doctors
+#define busy 0; // doctor is currently busy with one patient
+#define free 1; //doctor is currently free
+#define M 3; //number of patients 
+#define waiting 0; //patient is waiting
+#define consulting 1; //patient is consulting
+#define leave 2; //patient leave after consulting
+#define leavewithanger 3; //patient leave with anger
+
+#define MAXWAIT 2; //number of minutes a patient will wait for consulting
+#define CONSULTTIME 2; //every patient will get 60 min consulting time
+
+#define closingtime 20; //hospital only operates 8 hours
+
+var time = 0; //number of minutes passed since hospital open
+var waitingTime[M]; //waiting time of each patient
+var consultingTime[M]; //consulting time of each patient
+var doctors[N]; //status of each doctor
+var patients[M]; //status of each patient
+var FreeDoctor = 5;
+
+PatientArriving(i) = [i<M-1]patientarrive{patients[i]=4} -> oneminpass -> oneminpass -> oneminpass -> oneminpass -> oneminpass -> PatientArriving(i+1)
+				     []
+				     [i==M-1]patientarrive{patients[i]=4} -> Stop;
+
+//actions and states changes
+patient(i)=[time==closingtime]oneminpass{time=closingtime} -> Stop
+[]
+ [patients[i]==4 && waitingTime[i]==MAXWAIT]oneminpass{patients[i]=3;} -> Stop
+			[] 
+			[patients[i]==4 && waitingTime[i]<MAXWAIT && FreeDoctor>0]assign.i{patients[i]=1;FreeDoctor=FreeDoctor-1;} -> patient(i)
+			[] 
+			[patients[i]==1 && consultingTime[i]==CONSULTTIME]oneminpass{patients[i]=2 ; FreeDoctor=FreeDoctor+1;} -> Stop
+			[] 
+			[patients[i]==1 && consultingTime[i]<CONSULTTIME]oneminpass{patients[i]=1 ; consultingTime[i]++;} -> patient(i)
+			[] 
+			[patients[i]==4 && waitingTime[i]<MAXWAIT && FreeDoctor<1]wait{waitingTime[i]++} -> patient(i);
+			
+tick()= [time!=closingtime]oneminpass{time = time + 1} -> tick()
+		[]
+		[time==closingtime]oneminpass{time=closingtime} -> Stop;
+
+//modeling the system
+hospital = (||i:{0..M-1}@(patient(i)))||tick()||PatientArriving(0);
+//(||i:{0..M-1}@(PatientArriving(i)));
+
+//reasoning
+//#define allpatientsattendedto 
+//#define nopatientleavewithoutanger
+
+#define closeontime (time==closingtime);
+#define closeDoctor (FreeDoctor ==5);
+
+#assert hospital |= <>closeontime; //eventually hospital should close on time
+#assert hospital |= <> closeDoctor;

@@ -22,25 +22,30 @@ var doctors[N]; //status of each doctor
 var patients[M]; //status of each patient
 var FreeDoctor = 5;
 
+PatientArriving(i) = [i<M-1]patientarrive{patients[i]=4} -> oneminpass -> PatientArriving(i+1)
+				     []
+				     [i==M-1]patientarrive{patients[i]=4} -> oneminpass -> Stop;
+
 //actions and states changes
 patient(i)=[time==closingtime]oneminpass{time=closingtime} -> Stop
 []
- [patients[i]==0 && waitingTime[i]==MAXWAIT]oneminpass{patients[i]=3;} -> Stop
+ [patients[i]==4 && waitingTime[i]==MAXWAIT]oneminpass{patients[i]=3;} -> Stop
 			[] 
-			[patients[i]==0 && waitingTime[i]<MAXWAIT && FreeDoctor>0]assign.i{patients[i]=1;FreeDoctor=FreeDoctor-1;} -> patient(i)
+			[patients[i]==4 && waitingTime[i]<MAXWAIT && FreeDoctor>0]assign.i{patients[i]=1;FreeDoctor=FreeDoctor-1;} -> patient(i)
 			[] 
 			[patients[i]==1 && consultingTime[i]==CONSULTTIME]oneminpass{patients[i]=2 ; FreeDoctor=FreeDoctor+1;} -> Stop
 			[] 
 			[patients[i]==1 && consultingTime[i]<CONSULTTIME]oneminpass{patients[i]=1 ; consultingTime[i]++;} -> patient(i)
 			[] 
-			[patients[i]==0 && waitingTime[i]<MAXWAIT && FreeDoctor<1]wait{waitingTime[i]++} -> patient(i);
+			[patients[i]==4 && waitingTime[i]<MAXWAIT && FreeDoctor<1]wait{waitingTime[i]++} -> patient(i);
 			
 tick()= [time!=closingtime]oneminpass{time = time + 1} -> tick()
 		[]
 		[time==closingtime]oneminpass{time=closingtime} -> Stop;
 
 //modeling the system
-hospital = (||i:{0..M-1}@(patient(i)))||tick();
+hospital = patient(0)||patient(1)||patient(2)||tick()||PatientArriving(0);
+//(||i:{0..M-1}@(PatientArriving(i)));
 
 //reasoning
 //#define allpatientsattendedto 
