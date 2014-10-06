@@ -5,7 +5,7 @@
 #define busy 0; // doctor is currently busy with one patient
 #define free 1; //doctor is currently free
 #define M 3; //number of patients 
-#define waiting 0; //patient is waiting
+#define waiting 5; //patient is waiting
 #define consulting 1; //patient is consulting
 #define leave 2; //patient leave after consulting
 #define leavewithanger 3; //patient leave with anger
@@ -21,6 +21,7 @@ var consultingTime[M]; //consulting time of each patient
 var doctors[N]; //status of each doctor
 var patients[M]; //status of each patient
 var FreeDoctor = 5;
+var count = 0;
 
 PatientArriving(i) = [i<M-1]patientarrive{patients[i]=4} -> oneminpass -> oneminpass -> oneminpass -> oneminpass -> oneminpass -> PatientArriving(i+1)
 				     []
@@ -29,7 +30,7 @@ PatientArriving(i) = [i<M-1]patientarrive{patients[i]=4} -> oneminpass -> onemin
 //actions and states changes
 patient(i)=[time==closingtime]oneminpass{time=closingtime} -> Stop
 []
- [patients[i]==4 && waitingTime[i]==MAXWAIT]oneminpass{patients[i]=3;} -> Stop
+ [patients[i]==4 && waitingTime[i]==MAXWAIT]oneminpass{patients[i]=3; count++;} -> Stop
 			[] 
 			[patients[i]==4 && waitingTime[i]<MAXWAIT && FreeDoctor>0]assign.i{patients[i]=1;FreeDoctor=FreeDoctor-1;} -> patient(i)
 			[] 
@@ -45,7 +46,6 @@ tick()= [time!=closingtime]oneminpass{time = time + 1} -> tick()
 
 //modeling the system
 hospital = (||i:{0..M-1}@(patient(i)))||tick()||PatientArriving(0);
-//(||i:{0..M-1}@(PatientArriving(i)));
 
 //reasoning
 //#define allpatientsattendedto 
@@ -53,6 +53,8 @@ hospital = (||i:{0..M-1}@(patient(i)))||tick()||PatientArriving(0);
 
 #define closeontime (time==closingtime);
 #define closeDoctor (FreeDoctor ==5);
+#define Satisfied (count < 10);
 
 #assert hospital |= <>closeontime; //eventually hospital should close on time
 #assert hospital |= <> closeDoctor;
+#assert hospital |= <>Satisfied;
