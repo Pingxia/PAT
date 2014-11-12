@@ -28,8 +28,7 @@ PatientArriving(i) = [i<M-1]patientarrive{patients[i]=4} -> oneminpass -> onemin
 				     [i==M-1]patientarrive{patients[i]=4} -> Stop;
 
 //actions and states changes
-patient(i)=[time==closingtime]oneminpass{time=closingtime} -> Stop
-[]
+patient(i)=
  [patients[i]==4 && waitingTime[i]==MAXWAIT]oneminpass{patients[i]=3; count++;} -> Stop
 			[] 
 			[patients[i]==4 && waitingTime[i]<MAXWAIT && FreeDoctor>0]assign.i{patients[i]=1;FreeDoctor=FreeDoctor-1;} -> patient(i)
@@ -40,9 +39,9 @@ patient(i)=[time==closingtime]oneminpass{time=closingtime} -> Stop
 			[] 
 			[patients[i]==4 && waitingTime[i]<MAXWAIT && FreeDoctor<1]wait{waitingTime[i]++} -> patient(i);
 			
-tick()= [time!=closingtime]oneminpass{time = time + 1} -> tick()
+tick()= [time<(closingtime)]oneminpass{time = time + 1} -> tick()
 		[]
-		[time==closingtime]oneminpass{time=closingtime} -> Stop;
+		[time>=(closingtime)]Stop;
 
 //modeling the system
 hospital = (||i:{0..M-1}@(patient(i)))||tick()||PatientArriving(0);
@@ -58,3 +57,4 @@ hospital = (||i:{0..M-1}@(patient(i)))||tick()||PatientArriving(0);
 #assert hospital |= <>closeontime; //eventually hospital should close on time
 #assert hospital |= <> closeDoctor;
 #assert hospital |= <>Satisfied;
+#assert hospital deadlockfree;
