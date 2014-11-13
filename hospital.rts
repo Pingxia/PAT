@@ -1,0 +1,16 @@
+﻿#define N 100;
+#define MaxWaiting 3;
+#define ConsultTime 10;
+#define openHour 10;
+var AngryPatient = 0;
+var FreeDoctor = 1;
+
+Patient(i) = Wait[i*5]; (atomic {[FreeDoctor > 0]SeeDoctor.i{FreeDoctor=FreeDoctor-1;} -> Wait[ConsultTime]; Leave.i{FreeDoctor=FreeDoctor+1;} -> Skip} ) timeout[MaxWaiting] AngryLeave.i{AngryPatient ++} -> Skip;
+
+Hospital = || i:{0..N-1}@Patient(i);
+#define goal AngryPatient > 0;
+#assert Hospital deadlockfree;
+#assert Hospital reaches goal;
+
+HospitalWithClose = || i:{0..N-1}@Patient(i) deadline[openHour];
+#assert HospitalWithClose reaches goal;
