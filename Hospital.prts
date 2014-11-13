@@ -1,0 +1,45 @@
+﻿#import "PAT.Lib.Queue";
+
+#define N 3;
+#define MaxWaiting 30;
+#define ConsultTime 20;
+#define RegisterTime 30;
+#define openHour 100;
+#define MaxQueueLength 5;
+var ServePatient = 0;
+var AngryPatient = 0;
+var FreeDoctor = 1;
+
+var<Queue> CounterQueue; 
+
+Arrive(i) = pcase{
+				1: Wait[i*5]
+				1: Wait[i*10]
+				1: Wait[i*20]
+				};
+
+//Arrive(i) = Wait[i*5];
+
+Registration(i) = if (CounterQueue.Count() > MaxQueueLength) {
+							atomic{AngryLeave.i{AngryPatient ++} -> Skip}
+							} else {QueueUp{CounterQueue.Enqueue(i)} -> (([CounterQueue.First() == i]Register.i -> 
+							Wait[RegisterTime]) timeout[MaxWaiting] (AngryLeave.i{AngryPatient ++} -> Skip)); tau{CounterQueue.Dequeue()} -> Skip
+							};
+							
+Consultation(i) = atomic {([FreeDoctor > 0]SeeDoctor.i{FreeDoctor=FreeDoctor-1;} -> Wait[ConsultTime]; Leave.i{FreeDoctor=FreeDoctor+1; ServePatient ++;} -> Skip)};
+
+//Consultation(i) = (atomic {[FreeDoctor > 0]SeeDoctor.i{FreeDoctor=FreeDoctor-1;} -> Wait[ConsultTime]; 
+//					Leave.i{FreeDoctor=FreeDoctor+1;} -> Skip} ) timeout[MaxWaiting] AngryLeave.i{AngryPatient ++} -> Skip;
+
+Patient(i) = atomic{Arrive(i);Registration(i);Consultation(i)};
+
+#define notEmpty CounterQueue.Count() == 0 && ServePatient > 0; 
+
+Hospital = || i:{0..N-1}@Patient(i);
+#define goal AngryPatient > 0;
+#assert Hospital deadlockfree;
+#assert Hospital reaches goal;
+#assert Hospital reaches notEmpty with prob;
+
+HospitalWithClose = || i:{0..N-1}@Patient(i) deadline[openHour];
+#assert HospitalWithClose reaches goal with prob;
