@@ -12,6 +12,9 @@ var AngryPatient = 0;
 var FreeDoctor = 3;
 var Inspector = 1;
 var MedicineStock = 100;
+var student = 1;
+var worker = 2;
+var elderly = 3;
 
 var<List> NormalCounter;
 var<List> SpecialCounter; 
@@ -25,12 +28,19 @@ var<List> InspectQueue;
 //				};
 
 Arrive(i) = atomic{     pcase {
-						1: SetComingTime(i); NormalRegistration(i)
-						1: SetComingTime(i); SpecialRegistration(i)
+						1: SetComingPeopleType(i); NormalRegistration(i)
+						1: SetComingPeopleType(i); SpecialRegistration(i)
 						}
 			};
 
-SetComingTime(i) = atomic{
+SetComingPeopleType(i) = atomic{
+						pcase {
+							1: SetStudentComingTime()
+							2: SetWorkerComingTime()
+							3: SetElderlyComingTime()
+						}
+			};
+SetStudentComingTime() = atomic {
 						pcase {
 						1: Wait[10]
 						1: Wait[20]
@@ -45,7 +55,41 @@ SetComingTime(i) = atomic{
 						1: Wait[110]
 						1: Wait[120]
 						}
-			};
+};
+
+SetWorkerComingTime() = atomic {
+						pcase {
+						1: Wait[130]
+						1: Wait[140]
+						1: Wait[150]
+						1: Wait[160]
+						1: Wait[170]
+						1: Wait[180]
+						1: Wait[190]
+						1: Wait[200]
+						1: Wait[210]
+						1: Wait[220]
+						1: Wait[230]
+						1: Wait[240]
+						}
+};
+
+SetElderlyComingTime() = atomic {
+						pcase {
+						1: Wait[250]
+						1: Wait[260]
+						1: Wait[270]
+						1: Wait[280]
+						1: Wait[290]
+						1: Wait[300]
+						1: Wait[310]
+						1: Wait[320]
+						1: Wait[330]
+						1: Wait[340]
+						1: Wait[350]
+						1: Wait[360]
+						}
+};			
 
 NormalRegistration(i) = if (NormalCounter.Count() > MaxQueueLength) {
 							atomic{AngryLeave.i{AngryPatient ++} -> Skip}
@@ -67,7 +111,7 @@ Consultation(i) = atomic {(DocotorQ.i{ConsultQueue.Add(i)} -> ([ConsultQueue.Cou
 						Leave.i{FreeDoctor=FreeDoctor+1; ServePatient ++;} -> Skip);
 						pcase {
 						1: Inspection(i)
-						1: PickMedicine(i)
+						3: PickMedicine(i)
 						})};
 
 Inspection(i) = InspectQ.i{InspectQueue.Add(i)} -> ([InspectQueue.Count()>0 && InspectQueue.Get(0) == i && Inspector > 0]Inspect.i{Inspector=Inspector-1;InspectQueue.RemoveAt(0);} -> Wait[ConsultTime]; 
