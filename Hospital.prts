@@ -24,9 +24,26 @@ var<List> InspectQueue;
 //				1: Wait[i*20]
 //				};
 
-Arrive(i) = atomic{Wait[2*i];pcase {
-						1: NormalRegistration(i)
-						1: SpecialRegistration(i)
+Arrive(i) = atomic{     pcase {
+						1: SetComingTime(i); NormalRegistration(i)
+						1: SetComingTime(i); SpecialRegistration(i)
+						}
+			};
+
+SetComingTime(i) = atomic{
+						pcase {
+						1: Wait[10]
+						1: Wait[20]
+						1: Wait[30]
+						1: Wait[40]
+						1: Wait[50]
+						1: Wait[60]
+						1: Wait[70]
+						1: Wait[80]
+						1: Wait[90]
+						1: Wait[100]
+						1: Wait[110]
+						1: Wait[120]
 						}
 			};
 
