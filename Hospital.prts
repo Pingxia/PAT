@@ -1,15 +1,17 @@
 ﻿#import "PAT.Lib.List";
 
-#define N 3;
-#define MaxWaiting 3;
+#define N 6;
+#define MaxWaiting 10;
 #define ConsultTime 20;
-#define RegisterTime 6;
+#define RegisterTime 5;
 #define openHour 100;
 #define MaxQueueLength 5;
+#define StockLowerBound 10;
 var ServePatient = 0;
 var AngryPatient = 0;
 var FreeDoctor = 3;
 var Inspector = 1;
+var MedicineStock = 100;
 
 var<List> NormalCounter;
 var<List> SpecialCounter; 
@@ -22,7 +24,7 @@ var<List> InspectQueue;
 //				1: Wait[i*20]
 //				};
 
-Arrive(i) = atomic{Wait[i*2];pcase {
+Arrive(i) = atomic{Wait[2*i];pcase {
 						1: NormalRegistration(i)
 						1: SpecialRegistration(i)
 						}
@@ -30,29 +32,31 @@ Arrive(i) = atomic{Wait[i*2];pcase {
 
 NormalRegistration(i) = if (NormalCounter.Count() > MaxQueueLength) {
 							atomic{AngryLeave.i{AngryPatient ++} -> Skip}
-							} else {QueueUp.i{NormalCounter.Add(i)} -> (([NormalCounter.Count()>0 && NormalCounter.Get(0) == i]Register.i -> 
-							Wait[RegisterTime]; tau{NormalCounter.RemoveAt(0)} -> Consultation(i)) timeout[MaxWaiting] 
+						} else {
+							QueueUp.i{NormalCounter.Add(i)} -> ((atomic{[NormalCounter.Count()>0 && NormalCounter.Get(0) == i]Register.i ->
+							Wait[RegisterTime]; tau{NormalCounter.RemoveAt(0)} -> Consultation(i)}) timeout[MaxWaiting] 
 							(AngryLeave.i{AngryPatient ++;NormalCounter.Remove(i)} -> Skip))
-							};
+						};
 
 SpecialRegistration(i) = if (SpecialCounter.Count() > MaxQueueLength) {
 							atomic{AngryLeave.i{AngryPatient ++} -> Skip}
-							} else {QueueUp.i{SpecialCounter.Add(i)} -> (([SpecialCounter.Count()>0 && SpecialCounter.Get(0) == i]Register.i -> 
-							Wait[RegisterTime]; tau{SpecialCounter.RemoveAt(0)} -> Consultation(i)) timeout[MaxWaiting] 
-							(AngryLeave.i{AngryPatient ++;SpecialCounter.Remove(i)} -> a->Skip))
-							};
+						} else {
+							QueueUp.i{SpecialCounter.Add(i)} -> ((atomic{[SpecialCounter.Count()>0 && SpecialCounter.Get(0) == i]Register.i ->
+							Wait[RegisterTime]; tau{SpecialCounter.RemoveAt(0)} -> Consultation(i)}) timeout[MaxWaiting] 
+							(AngryLeave.i{AngryPatient ++;SpecialCounter.Remove(i)} ->Skip))
+						};
 							
 Consultation(i) = atomic {(DocotorQ.i{ConsultQueue.Add(i)} -> ([ConsultQueue.Count()>0 && ConsultQueue.Get(0) == i && FreeDoctor > 0]SeeDoctor.i{FreeDoctor=FreeDoctor-1;ConsultQueue.RemoveAt(0);} -> Wait[ConsultTime]; 
 						Leave.i{FreeDoctor=FreeDoctor+1; ServePatient ++;} -> Skip);
 						pcase {
-						1: Skip
-						//1: PickMedicine(i)
+						1: Inspection(i)
+						1: PickMedicine(i)
 						})};
 
-//Inspection(i) = InspectQ.i{InspectQueue.Add(i)} -> ([InspectQueue.Count()>0 && InspectQueue.Get(0) == i && Inspector > 0]Inspect.i{Inspector=Inspector-1;InspectQueue.RemoveAt(0);} -> Wait[ConsultTime]; 
-//						LeaveInspect.i{Inspector=Inspector+1;} -> Skip);
-// 
-PickMedicine(i) = Skip;
+Inspection(i) = InspectQ.i{InspectQueue.Add(i)} -> ([InspectQueue.Count()>0 && InspectQueue.Get(0) == i && Inspector > 0]Inspect.i{Inspector=Inspector-1;InspectQueue.RemoveAt(0);} -> Wait[ConsultTime]; 
+						LeaveInspect.i{Inspector=Inspector+1;} -> Skip);
+ 
+PickMedicine(i) = GetMedicine.i {MedicineStock--;} -> Skip;
 
 //Consultation(i) = (atomic {[FreeDoctor > 0]SeeDoctor.i{FreeDoctor=FreeDoctor-1;} -> Wait[ConsultTime]; 
 //					Leave.i{FreeDoctor=FreeDoctor+1;} -> Skip} ) timeout[MaxWaiting] AngryLeave.i{AngryPatient ++} -> Skip;
@@ -61,11 +65,22 @@ PickMedicine(i) = Skip;
 
 #define notEmpty NormalCounter.Count() == 0 && ServePatient > 0; 
 
-Hospital = || i:{0..N-1}@Arrive(i);
-#define goal AngryPatient > 0;
+Hospital = ||| i:{0..N-1}@Arrive(i);
+#define noLeavingWithAnger  AngryPatient == 0;
+#define fewLeaving 3*AngryPatient < N;
+#define refillMedicine MedicineStock<StockLowerBound;
 #assert Hospital deadlockfree;
-#assert Hospital reaches goal;
+//#assert Hospital reaches goal;
+
+
+
+
+
+#assert Hospital |= [] noLeavingWithAnger with prob;
+#assert Hospital |= [] fewLeaving;
+#assert Hospital |= [] fewLeaving with prob;
+#assert Hospital reaches refillMedicine;
 #assert Hospital reaches notEmpty with prob;
 
-HospitalWithClose = || i:{0..N-1}@Arrive(i) deadline[openHour];
-#assert HospitalWithClose reaches goal with prob;
+HospitalWithClose = ||| i:{0..N-1}@Arrive(i) deadline[openHour];
+#assert HospitalWithClose |= [] noLeavingWithAnger with prob;
