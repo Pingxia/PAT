@@ -1,10 +1,12 @@
-﻿#import "PAT.Lib.List";
+﻿//I think we only simulate up to 60 minutes.... otherwise too long
+
+#import "PAT.Lib.List";
 
 #define N 6;
 #define MaxWaiting 10;
 #define ConsultTime 20;
 #define RegisterTime 5;
-#define openHour 100;
+#define openHour 60;
 #define MaxQueueLength 5;
 #define StockLowerBound 10;
 var ServePatient = 0;
@@ -28,7 +30,7 @@ var<List> InspectQueue;
 //				};
 
 Arrive(i) = atomic{     pcase {
-						1: SetComingPeopleType(i); NormalRegistration(i)
+						4: SetComingPeopleType(i); NormalRegistration(i)
 						1: SetComingPeopleType(i); SpecialRegistration(i)
 						}
 			};
@@ -42,52 +44,52 @@ SetComingPeopleType(i) = atomic{
 			};
 SetStudentComingTime() = atomic {
 						pcase {
+						1: Wait[5]
 						1: Wait[10]
+						1: Wait[15]
 						1: Wait[20]
-						1: Wait[30]
-						1: Wait[40]
+						3: Wait[25]
+						3: Wait[30]
+						3: Wait[35]
+						3: Wait[40]
+						1: Wait[45]
 						1: Wait[50]
+						1: Wait[55]
 						1: Wait[60]
-						1: Wait[70]
-						1: Wait[80]
-						1: Wait[90]
-						1: Wait[100]
-						1: Wait[110]
-						1: Wait[120]
 						}
 };
 
 SetWorkerComingTime() = atomic {
 						pcase {
-						1: Wait[130]
-						1: Wait[140]
-						1: Wait[150]
-						1: Wait[160]
-						1: Wait[170]
-						1: Wait[180]
-						1: Wait[190]
-						1: Wait[200]
-						1: Wait[210]
-						1: Wait[220]
-						1: Wait[230]
-						1: Wait[240]
+						1: Wait[5]
+						1: Wait[10]
+						1: Wait[15]
+						1: Wait[20]
+						1: Wait[25]
+						1: Wait[30]
+						1: Wait[35]
+						1: Wait[40]
+						3: Wait[45]
+						3: Wait[50]
+						3: Wait[55]
+						3: Wait[60]
 						}
 };
 
 SetElderlyComingTime() = atomic {
 						pcase {
-						1: Wait[250]
-						1: Wait[260]
-						1: Wait[270]
-						1: Wait[280]
-						1: Wait[290]
-						1: Wait[300]
-						1: Wait[310]
-						1: Wait[320]
-						1: Wait[330]
-						1: Wait[340]
-						1: Wait[350]
-						1: Wait[360]
+						3: Wait[5]
+						3: Wait[10]
+						3: Wait[15]
+						1: Wait[20]
+						1: Wait[25]
+						1: Wait[30]
+						1: Wait[35]
+						1: Wait[40]
+						1: Wait[45]
+						3: Wait[50]
+						3: Wait[55]
+						3: Wait[60]
 						}
 };			
 
@@ -107,15 +109,15 @@ SpecialRegistration(i) = if (SpecialCounter.Count() > MaxQueueLength) {
 							(AngryLeave.i{AngryPatient ++;SpecialCounter.Remove(i)} ->Skip))
 						};
 							
-Consultation(i) = atomic {(DocotorQ.i{ConsultQueue.Add(i)} -> ([ConsultQueue.Count()>0 && ConsultQueue.Get(0) == i && FreeDoctor > 0]SeeDoctor.i{FreeDoctor=FreeDoctor-1;ConsultQueue.RemoveAt(0);} -> Wait[ConsultTime]; 
-						Leave.i{FreeDoctor=FreeDoctor+1; ServePatient ++;} -> Skip);
+Consultation(i) = atomic {DocotorQ.i{ConsultQueue.Add(i)} -> ([ConsultQueue.Count()>0 && ConsultQueue.Get(0) == i && FreeDoctor > 0]SeeDoctor.i{FreeDoctor=FreeDoctor-1;ConsultQueue.RemoveAt(0);} -> Wait[ConsultTime]; 
+						Leave.i{FreeDoctor=FreeDoctor+1; ServePatient ++;} -> Skip;
 						pcase {
 						1: Inspection(i)
 						3: PickMedicine(i)
 						})};
 
-Inspection(i) = InspectQ.i{InspectQueue.Add(i)} -> ([InspectQueue.Count()>0 && InspectQueue.Get(0) == i && Inspector > 0]Inspect.i{Inspector=Inspector-1;InspectQueue.RemoveAt(0);} -> Wait[ConsultTime]; 
-						LeaveInspect.i{Inspector=Inspector+1;} -> Skip);
+Inspection(i) = atomic{InspectQ.i{InspectQueue.Add(i)} -> ([InspectQueue.Count()>0 && InspectQueue.Get(0) == i && Inspector > 0]Inspect.i{Inspector=Inspector-1;InspectQueue.RemoveAt(0);} -> Wait[ConsultTime]; 
+						LeaveInspect.i{Inspector=Inspector+1;} -> Skip)};
  
 PickMedicine(i) = GetMedicine.i {MedicineStock--;} -> Skip;
 
