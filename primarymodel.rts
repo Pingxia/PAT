@@ -1,0 +1,15 @@
+﻿#define N 12;
+#define ConsultTime 20;
+#define openHour 60;
+var FreeDoctor = 4;
+var servedPatient = 0;
+
+Patient(i) = Wait[i*5]; (atomic {[FreeDoctor > 0]SeeDoctor.i{FreeDoctor=FreeDoctor-1;servedPatient = servedPatient + 1} -> Wait[ConsultTime]; 
+							Leave.i{FreeDoctor=FreeDoctor+1;} -> Skip} ); 
+
+Hospital = || i:{0..N-1}@Patient(i);
+#assert Hospital deadlockfree;
+
+#define goal 0 == 0;
+HospitalWithClose = || i:{0..N-1}@Patient(i) deadline[openHour];
+#assert HospitalWithClose reaches goal with max(servedPatient);
