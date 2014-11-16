@@ -2,96 +2,97 @@
 
 #import "PAT.Lib.List";
 
-#define N 6;
+#define N 12;
 #define MaxWaiting 10;
-#define ConsultTime 20;
-#define RegisterTime 5;
+#define ConsultTime 30;
+#define RegisterTime 6;
 #define openHour 60;
-#define MaxQueueLength 5;
+#define MaxQueueLength 3;
 #define StockLowerBound 10;
 var ServePatient = 0;
 var AngryPatient = 0;
 var FreeDoctor = 3;
 var Inspector = 1;
 var MedicineStock = 100;
-var student = 1;
-var worker = 2;
-var elderly = 3;
+//var student = 1;
+//var worker = 2;
+//var elderly = 3;
+var close;
 
 var<List> NormalCounter;
 var<List> SpecialCounter; 
 var<List> ConsultQueue;
 var<List> InspectQueue;
 
-//Arrive(i) = pcase{
-//				1: Wait[i*5]
-//				1: Wait[i*10]
-//				1: Wait[i*20]
-//				};
-
-Arrive(i) = atomic{     pcase {
-						4: SetComingPeopleType(i); NormalRegistration(i)
-						1: SetComingPeopleType(i); SpecialRegistration(i)
+Arrive(i) = atomic{ Wait[5*i];  pcase {
+						4: NormalRegistration(i)
+						1: SpecialRegistration(i)
 						}
 			};
 
-SetComingPeopleType(i) = atomic{
-						pcase {
-							1: SetStudentComingTime()
-							1: SetWorkerComingTime()
-							4: SetElderlyComingTime()
-						}
-			};
-SetStudentComingTime() = atomic {
-						pcase {
-						1: Wait[5]
-						1: Wait[10]
-						1: Wait[15]
-						1: Wait[20]
-						3: Wait[25]
-						3: Wait[30]
-						3: Wait[35]
-						3: Wait[40]
-						1: Wait[45]
-						1: Wait[50]
-						1: Wait[55]
-						1: Wait[60]
-						}
-};
+//Arrive(i) = atomic{     pcase {
+//						4: SetComingPeopleType(i); NormalRegistration(i)
+//						1: SetComingPeopleType(i); SpecialRegistration(i)
+//						}
+//			};
 
-SetWorkerComingTime() = atomic {
-						pcase {
-						1: Wait[5]
-						1: Wait[10]
-						1: Wait[15]
-						1: Wait[20]
-						1: Wait[25]
-						1: Wait[30]
-						1: Wait[35]
-						1: Wait[40]
-						3: Wait[45]
-						3: Wait[50]
-						3: Wait[55]
-						3: Wait[60]
-						}
-};
-
-SetElderlyComingTime() = atomic {
-						pcase {
-						3: Wait[5]
-						3: Wait[10]
-						3: Wait[15]
-						2: Wait[20]
-						2: Wait[25]
-						2: Wait[30]
-						2: Wait[35]
-						2: Wait[40]
-						2: Wait[45]
-						3: Wait[50]
-						3: Wait[55]
-						3: Wait[60]
-						}
-};			
+//SetComingPeopleType(i) = atomic{
+//						pcase {
+//							1: SetStudentComingTime()
+//							1: SetWorkerComingTime()
+//							4: SetElderlyComingTime()
+//						}
+//			};
+//SetStudentComingTime() = atomic {
+//						pcase {
+//						1: Wait[5]
+//						1: Wait[10]
+//						1: Wait[15]
+//						1: Wait[20]
+//						3: Wait[25]
+//						3: Wait[30]
+//						3: Wait[35]
+//						3: Wait[40]
+//						1: Wait[45]
+//						1: Wait[50]
+//						1: Wait[55]
+//						1: Wait[60]
+//						}
+//};
+//
+//SetWorkerComingTime() = atomic {
+//						pcase {
+//						1: Wait[5]
+//						1: Wait[10]
+//						1: Wait[15]
+//						1: Wait[20]
+//						1: Wait[25]
+//						1: Wait[30]
+//						1: Wait[35]
+//						1: Wait[40]
+//						3: Wait[45]
+//						3: Wait[50]
+//						3: Wait[55]
+//						3: Wait[60]
+//						}
+//};
+//
+//SetElderlyComingTime() = atomic {
+//						pcase {
+//						3: Wait[5]
+//						3: Wait[10]
+//						3: Wait[15]
+//						2: Wait[20]
+//						2: Wait[25]
+//						2: Wait[30]
+//						2: Wait[35]
+//						2: Wait[40]
+//						2: Wait[45]
+//						3: Wait[50]
+//						3: Wait[55]
+//						3: Wait[60]
+//						}
+//};			
 
 NormalRegistration(i) = if (NormalCounter.Count() > MaxQueueLength) {
 							atomic{AngryLeave.i{AngryPatient ++} -> Skip}
@@ -132,18 +133,17 @@ Hospital = ||| i:{0..N-1}@Arrive(i);
 #define noLeavingWithAnger  AngryPatient == 0;
 #define fewLeaving 3*AngryPatient < N;
 #define refillMedicine MedicineStock<StockLowerBound;
+//#define noLousyDoc ConsultQueue[0] && ConsultQueue[1] && ConsultQueue[2];
+
+#assert Hospital reaches notEmpty;
 #assert Hospital deadlockfree;
-//#assert Hospital reaches goal;
-
-
-
-
-
+#assert Hospital |= [] noLeavingWithAnger;
 #assert Hospital |= [] noLeavingWithAnger with prob;
 #assert Hospital |= [] fewLeaving;
 #assert Hospital |= [] fewLeaving with prob;
+//#assert Hospital reaches noLousyDocs;
 #assert Hospital reaches refillMedicine;
-#assert Hospital reaches notEmpty with prob;
+
 
 HospitalWithClose = ||| i:{0..N-1}@Arrive(i) deadline[openHour];
 #assert HospitalWithClose |= [] noLeavingWithAnger with prob;
