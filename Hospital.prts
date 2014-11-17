@@ -4,6 +4,7 @@
 
 #define N 12;
 #define MaxWaiting 10;
+#define PatientArriveInterval 5;
 #define ConsultTime 30;
 #define RegisterTime 6;
 #define openHour 60;
@@ -24,7 +25,7 @@ var<List> SpecialCounter;
 var<List> ConsultQueue;
 var<List> InspectQueue;
 
-Arrive(i) = atomic{ Wait[5*i];  pcase {
+Arrive(i) = atomic{ Wait[PatientArriveInterval*i];  pcase {
 						4: NormalRegistration(i)
 						1: SpecialRegistration(i)
 						}
@@ -131,7 +132,7 @@ PickMedicine(i) = GetMedicine.i {MedicineStock--;} -> Skip;
 
 Hospital = ||| i:{0..N-1}@Arrive(i);
 #define noLeavingWithAnger  AngryPatient == 0;
-#define fewLeaving 3*AngryPatient < N;
+#define lessThanOneThirdLeaving 3*AngryPatient < N;
 #define refillMedicine MedicineStock<StockLowerBound;
 //#define noLousyDoc ConsultQueue[0] && ConsultQueue[1] && ConsultQueue[2];
 
@@ -139,8 +140,8 @@ Hospital = ||| i:{0..N-1}@Arrive(i);
 #assert Hospital deadlockfree;
 #assert Hospital |= [] noLeavingWithAnger;
 #assert Hospital |= [] noLeavingWithAnger with prob;
-#assert Hospital |= [] fewLeaving;
-#assert Hospital |= [] fewLeaving with prob;
+#assert Hospital |= [] lessThanOneThirdLeaving;
+#assert Hospital |= [] lessThanOneThirdLeaving with prob;
 //#assert Hospital reaches noLousyDocs;
 #assert Hospital reaches refillMedicine;
 
